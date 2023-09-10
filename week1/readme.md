@@ -110,24 +110,30 @@ ArgoCD开始将两个应用部署到k8s上
 2. 通过merge_request将dev代码合并到main分支，触发流水线
 3. jenkins流水线通过后ArgoCD部署main环境
 
-先在dev分支下修改代码
+### 更新dev环境
+- 先在dev分支下修改代码
 ![Alt text](image-8.png)
 ![Alt text](image-9.png)
-然后会触发新的CI流水线
+
+- 然后会触发新的CI流水线
 ![Alt text](image-10.png)
-通过后ArgoCD开始更新dev应用
+
+- 通过后ArgoCD开始更新dev应用
 ![Alt text](image-11.png)
-可以看到变化了
+
+- 可以看到变化了
 ![Alt text](image-12.png)
-再次提交代码到main分支,先创建一个merge request
+
+### 更新main环境
+- 再次提交代码到main分支,先创建一个merge request
 ![Alt text](image-13.png)
-要取消勾选删除分支的选项
+- 要取消勾选删除分支的选项
 ![Alt text](image-14.png)
-提交mr后会再次触发CI流水线
+- 提交mr后会再次触发CI流水线
 ![Alt text](image-15.png)
-可以选则通过pipeline后自动提交合并，在合并后再次触发main分支的CI流水线
+- 可以选则通过pipeline后自动提交合并，在合并后再次触发main分支的CI流水线
 ![Alt text](image-16.png)
-main分支也完成了更新
+- main分支也完成了更新
 ![Alt text](image-17.png)
 ![Alt text](image-18.png)
 
@@ -140,12 +146,16 @@ main分支也完成了更新
 
 先创建一个新的testing分支
 ![Alt text](image-19.png)
+
 jenkins底下已经出testing分支
 ![Alt text](image-20.png)
+
 在helm仓库中env目录里的main复制为testing，并修改颜色以做区分
 ![Alt text](image-22.png)
+
 ArgoCD出现了第三个应用
 ![Alt text](image-23.png)
+
 可以看到应用创建成功了
 ![Alt text](image-24.png)
 ![Alt text](image-25.png)
