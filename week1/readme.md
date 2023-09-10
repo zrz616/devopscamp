@@ -20,10 +20,11 @@ export TF_VAR_secret_key="<KEY>" # secret key
 
 ### grafana
 > Grafana是一个开源的数据可视化和分析软件。它可以帮助您通过图表、仪表板和警报来监
+
 之前的terrraform代码中已经通过Helm Charts安装了grafana，并且内置了各种dashborad，如kubernetes集群监控、coreDNS、ArgoCD等
-![Alt text](image.png)
-![Alt text](image-1.png)
-![Alt text](image-2.png)
+![Alt text](assets/image.png)
+![Alt text](assets/image-1.png)
+![Alt text](assets/image-2.png)
 
 ### gitlab
 > Gitlab是一个基于MIT协议发布的版本控制系统，使用Ruby on Rails开发，自带一个Web界面，支持Git作为唯一的代码
@@ -64,11 +65,11 @@ if echo "$project_response" | grep -q "HTTP/2 404"; then
 	git clone https://github.com/lyzhang1999/${example_project_name}-helm.git
 	cd ${example_project_name}-helm
 
-	yq -i '.image.repository = "harbor.${domain}/${harbor_registry}/${example_project_name}"' charts/env/dev/values.yaml
-	yq -i '.image.repository = "harbor.${domain}/${harbor_registry}/${example_project_name}"' charts/env/main/values.yaml
+	yq -i '.assets/image.repository = "harbor.${domain}/${harbor_registry}/${example_project_name}"' charts/env/dev/values.yaml
+	yq -i '.assets/image.repository = "harbor.${domain}/${harbor_registry}/${example_project_name}"' charts/env/main/values.yaml
 
-	# generate regcred.yaml in charts/templates/image-pull-secret.yaml for pull image from harbor
-	kubectl create secret docker-registry regcred --docker-server=harbor.${domain} --docker-username=admin --docker-password=${harbor_password} -o yaml --dry-run=client > charts/templates/image-pull-secret.yaml
+	# generate regcred.yaml in charts/templates/assets/image-pull-secret.yaml for pull assets/image from harbor
+	kubectl create secret docker-registry regcred --docker-server=harbor.${domain} --docker-username=admin --docker-password=${harbor_password} -o yaml --dry-run=client > charts/templates/assets/image-pull-secret.yaml
 
 	git remote set-url origin https://root:$personal_access_token@gitlab.${domain}/root/${example_project_name}-helm.git
 	git add .
@@ -84,26 +85,26 @@ fi
 
 ### jenkins
 本套CI流水线中包含代码测试、sonar-scanner代码扫描、kaniko构建镜像并导出成tarball、grype镜像安全扫描、crane推送镜像、cosign镜像签名
-![Alt text](image-4.png)
-![Alt text](image-3.png)
+![Alt text](assets/image-4.png)
+![Alt text](assets/image-3.png)
 
 ### Harbor
 Harbor是一个用于存储和分发Docker容器内容的企业级Registry服务器。harbor中可以设置只信任通过cosign签名的镜像，这样可以确保只有通过流水线的镜像才会被自动部署
-![Alt text](image-26.png)
+![Alt text](assets/image-26.png)
 
 ### ArgoCD
 >Argo CD是一款开源的GitOps工具，可以实现Git仓库中的应用部署。
 - 当镜像更新完成后，argoCD会从相应的helm仓库中拉取描述文件进行部署
 - 可以通过不同的Namespaces区分不同的环境
 
-argocd-image-updater会更新helm仓库中的image.tag信息
-![Alt text](image-21.png)
+argocd-assets/image-updater会更新helm仓库中的assets/image.tag信息
+![Alt text](assets/image-21.png)
 当harbor上dev、main镜像签名通过后，ArgoCD可以看到两个应用
-![Alt text](image-5.png)
+![Alt text](assets/image-5.png)
 ArgoCD开始将两个应用部署到k8s上
-![Alt text](image-6.png)
+![Alt text](assets/image-6.png)
 部署完成后两个应用可以正常访问了
-![Alt text](image-7.png)
+![Alt text](assets/image-7.png)
 
 ## 提交代码更新
 1. 首先提交dev分支代码到gitlab，jenkins流水线通过后ArgoCD部署dev环境
@@ -112,30 +113,30 @@ ArgoCD开始将两个应用部署到k8s上
 
 ### 更新dev环境
 - 先在dev分支下修改代码
-![Alt text](image-8.png)
-![Alt text](image-9.png)
+![Alt text](assets/image-8.png)
+![Alt text](assets/image-9.png)
 
 - 然后会触发新的CI流水线
-![Alt text](image-10.png)
+![Alt text](assets/image-10.png)
 
 - 通过后ArgoCD开始更新dev应用
-![Alt text](image-11.png)
+![Alt text](assets/image-11.png)
 
 - 可以看到变化了
-![Alt text](image-12.png)
+![Alt text](assets/image-12.png)
 
 ### 更新main环境
 - 再次提交代码到main分支,先创建一个merge request
-![Alt text](image-13.png)
+![Alt text](assets/image-13.png)
 - 要取消勾选删除分支的选项
-![Alt text](image-14.png)
+![Alt text](assets/image-14.png)
 - 提交mr后会再次触发CI流水线
-![Alt text](image-15.png)
+![Alt text](assets/image-15.png)
 - 可以选则通过pipeline后自动提交合并，在合并后再次触发main分支的CI流水线
-![Alt text](image-16.png)
+![Alt text](assets/image-16.png)
 - main分支也完成了更新
-![Alt text](image-17.png)
-![Alt text](image-18.png)
+![Alt text](assets/image-17.png)
+![Alt text](assets/image-18.png)
 
 
 ## 创建新的测试环境
@@ -145,17 +146,41 @@ ArgoCD开始将两个应用部署到k8s上
 4. 可以看到testing Namespace下有相应的deployment
 
 先创建一个新的testing分支
-![Alt text](image-19.png)
+![Alt text](assets/image-19.png)
 
 jenkins底下已经出testing分支
-![Alt text](image-20.png)
+![Alt text](assets/image-20.png)
 
 在helm仓库中env目录里的main复制为testing，并修改颜色以做区分
-![Alt text](image-22.png)
+![Alt text](assets/image-22.png)
 
 ArgoCD出现了第三个应用
-![Alt text](image-23.png)
+![Alt text](assets/image-23.png)
 
 可以看到应用创建成功了
-![Alt text](image-24.png)
-![Alt text](image-25.png)
+![Alt text](assets/image-24.png)
+![Alt text](assets/image-25.png)
+
+## 敏捷开发中的迭代、用户故事、任务有哪些区别
+
+### 迭代
+
+- 迭代是指在一个时间段内，完成一组功能、任务或用户故事的过程。通常持续1到4周。
+- 迭代的主要目标是将软件系统分成小块，并在每个迭代结束时交付可用的增量版本。
+- 迭代通常以一个可工作的软件版本作为结果，可以进行测试和验证。
+
+### 用户故事
+
+- 用户故事是用户需求的一种表达方式，通常以简洁的形式来描述一个功能或特性。
+- 用户故事通常包括角色（谁需要这个功能）、功能（做什么）和价值（为什么需要）。
+- 用户故事有助于团队更好地理解用户需求，并将其分解成小任务，以便在迭代中实现
+
+### 任务
+
+- 任务是用户故事的更小的、可执行的部分。
+- 任务通常以更具体的行动步骤或工作单元的形式存在，以实现用户故事所描述的功能。
+- 任务可以分配给团队成员，以确保每个任务都有人负责。
+- 任务的完成状态可以用于跟踪迭代进度，并作为验收标准的一部分。
+
+### 总结
+总结来说，迭代是时间框架，用于将开发工作划分为小块，用户故事是帮助团队对焦用户需求的手段，而任务是用户故事的具体执行步骤和验收标准。任务有助于团队管理和跟踪工作，确保用户故事按计划完成。
