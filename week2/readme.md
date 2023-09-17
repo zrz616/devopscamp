@@ -246,3 +246,28 @@ CMD ["/app/src/app"]
 ```
 ![Alt text](assets/image10.png)
 使用scratch镜像最终镜像大小只有2.9M，不过scratch没有内置任何sh，因此不方便程序调试
+
+## 使用docker buildx多架构构建
+- docker官方推出的[buildx](https://docs.docker.com/buildx/)工具可以实现多平台镜像构建
+
+
+### docker build --platform
+1. 从`docker build -h`看到`docker build`支持`--platform`选项，尝试使用`docker build`构建
+```shell
+docker build --platform "linux/amd64,linux/arm64" -t vincent616/go:test11 -f Dockerfile-4 --push .
+# [+] Building 0.0s (0/0)
+# ERROR: multiple platforms feature is currently not supported for docker driver. Please switch to a different driver (eg. "docker buildx create --use")
+```
+2. 按照错误提示使用`docker buildx create --use`,可以看到多出一个构建器
+    ![Alt text](assets/image11.png)
+3. 再使用`docker build --platform`,还是一样的报错
+4. 使用`docker buildx build --platform "linux/amd64,linux/arm64" -t vincent616/go:test11 -f Dockerfile-4 --push .`
+    - 构建过程可以分别看到`linux/amd64`和`linux/arm64`
+    ![Alt text](assets/image12.png)
+    
+    - 最终可以看到linux/amd64、linux/arm64镜像都构成成功，并且成功推送到镜像仓库了
+    ![Alt text](assets/image13.png)
+
+### 结论
+- 使用多架构构建需要使用`docker buildx build --platform`命令
+- `docker --push`选项可以直接将构建镜像推送至镜像仓库
