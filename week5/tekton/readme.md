@@ -298,3 +298,205 @@ spec:
 - 可以看见vote仓库也被构建出来了
 
 ![Alt text](image-6.png)
+
+## ex4 github event trigger
+- 在ex3的基础上，我们添加一个webhook,这样每次有push事件
+- 使用tekton的event trigger需要提前安装好依赖的CRD
+
+``` shell
+kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/latest/interceptors.yaml
+```
+
+- 然后会出现一个名为`el-github-listener`的pod，这里用ingress将他的8080端口暴露出来给github webhook使用, 对应路径：https://tekton.blkuo301.devopscamp.us/hooks
+- 接下来配置`eventListener`和`triggerTemplate`
+
+``` yaml
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: github-template
+spec:
+  params:
+    - name: git_url
+    - name: commit_id
+    - name: microservice
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: github-run-
+      spec:
+        taskRunSpecs:
+          - pipelineTaskName: git-clone
+            serviceAccountName: build-bot
+        pipelineRef:
+          name: github-pipeline
+        workspaces:
+          # - name: output
+          #   volumeClaimTemplate:
+          #     spec:
+          #       accessModes:
+          #         - ReadWriteOnce
+          #       resources:
+          #         requests:
+          #           storage: 50Mi
+          - name: output
+            persistentVolumeClaim:
+              claimName: pipeline-pvc
+            subPath: $(context.pipelineRun.uid)
+          - name: sonar-credentials
+            secret:
+              secretName: sonar-user-pass
+          - name: docker-credentials
+            secret:
+              secretName: docker-credentials
+        params:
+          - name: git_url
+            value: $(tt.params.git_url) # 注意：$tt 开头，从 EventListener binding params 获取
+          - name: microservice
+            value: $(tt.params.microservice)
+          - name: git_repository
+            value: "vote"
+          - name: commit_id
+            value: $(tt.params.commit_id)
+          - name: registry_url
+            value: "harbor.wangwei.devopscamp.us"
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github-listener
+spec:
+  serviceAccountName: tekton-triggers
+  triggers:
+    - name: github-push-events-trigger-result
+      interceptors:
+        - ref:
+            name: github
+          params:
+            # - name: secretRef
+            #   value:
+            #     secretName: github-secret
+            #     secretKey: secretToken
+            - name: "eventTypes"
+              value:
+                - pull_request
+                - push
+            - name: "addChangedFiles"
+              value:
+                enabled: true
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              # execute only when a file within the controllers directory has changed
+              value: extensions.changed_files.matches('result/')
+      bindings:
+        - name: git_url
+          value: $(body.repository.clone_url)
+        - name: commit_id
+          value: $(body.after)
+        - name: microservice
+          value: "result"
+      template:
+        ref: github-template
+
+    - name: github-push-events-trigger-vote
+      interceptors:
+        - ref:
+            name: github
+          params:
+            # - name: secretRef
+            #   value:
+            #     secretName: github-secret
+            #     secretKey: secretToken
+            - name: "eventTypes"
+              value:
+                - pull_request
+                - push
+            - name: "addChangedFiles"
+              value:
+                enabled: true
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              # execute only when a file within the controllers directory has changed
+              value: extensions.changed_files.matches('vote/')
+      bindings:
+        - name: git_url
+          value: $(body.repository.clone_url)
+        - name: commit_id
+          value: $(body.after)
+        - name: microservice
+          value: "vote"
+      template:
+        ref: github-template
+
+    - name: github-push-events-trigger-worker
+      interceptors:
+        - ref:
+            name: github
+          params:
+            # - name: secretRef
+            #   value:
+            #     secretName: github-secret
+            #     secretKey: secretToken
+            - name: "eventTypes"
+              value:
+                - pull_request
+                - push
+            - name: "addChangedFiles"
+              value:
+                enabled: true
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              # execute only when a file within the controllers directory has changed
+              value: extensions.changed_files.matches('worker/')
+      bindings:
+        - name: git_url
+          value: $(body.repository.clone_url)
+        - name: commit_id
+          value: $(body.after)
+        - name: microservice
+          value: "worker"
+      template:
+        ref: github-template
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-triggers
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: triggers-eventlistener-binding
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: triggers-eventlistener-clusterbinding
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+```
+
+- 尝试更新github代码仓库，可以看到流水线被触发
+
+![Alt text](image-7.png)
